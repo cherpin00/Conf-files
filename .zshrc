@@ -196,6 +196,4 @@ fi
 
 
 #My updates
-export TRICK_HOME="${HOME}/gitProjects/NASA/trick"
-export PATH=${PATH}:${TRICK_HOME}/bin
 alias dir='ls -latrh'
