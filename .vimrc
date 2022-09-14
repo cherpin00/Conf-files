@@ -88,6 +88,6 @@ nmap <leader>p :CtrlP<cr>
 map <leader>b :NERDTree<CR>
 map <F5> :w <CR> :!g++ % -o %< -lrt && ./%< <CR>
 map <leader><tab> :bn<CR>
-map <leader><TAB> :bp<cr>
+map <leader><S-tab> :bp<cr>
 map <leader>w :bd<cr>
 map <leader><f> :YcmCompleter FixIt<CR>
