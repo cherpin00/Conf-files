@@ -56,6 +56,7 @@ filetype plugin indent on    " required
 
 " gruvbox settings
 autocmd vimenter * ++nested colorscheme gruvbox
+" autocmd vimenter * ++nested colorscheme gruvbox " Use this for older versions if you get this error: autocmd vimenter * ++nested colorscheme gruvbox
 
 "CtrlP settings
 set runtimepath^=~/.vim/bundle/ctrlp.vim
