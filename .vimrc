@@ -83,6 +83,7 @@ set number
 set smartcase
 set visualbell
 set noerrorbells
+set backspace=indent,eol,start
 
 nmap <leader>p :CtrlP<cr>
 map <leader>b :NERDTree<CR>
