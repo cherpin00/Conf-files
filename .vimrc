@@ -60,6 +60,7 @@ autocmd vimenter * ++nested colorscheme gruvbox
 
 "CtrlP settings
 set runtimepath^=~/.vim/bundle/ctrlp.vim
+let g:ctrlp_show_hidden = 1
 
 "gruvbox settings
 set bg=dark
