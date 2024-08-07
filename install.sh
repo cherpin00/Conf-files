@@ -25,7 +25,9 @@ function install_vimrc() {
 
 function install_bashrc() {
 	mkdir -p $HOME/.bashrc.d
-	copy .bashrc $HOME/.bashrc.d/defaults
+	if ! copy .bashrc $HOME/.bashrc.d/defaults; then
+		return 1;
+	fi
 	if ! cat $HOME/.bashrc | grep "User specific aliases and functions" > /dev/null; then
 		lines='
 # User specific aliases and functions
@@ -49,6 +51,17 @@ function install_fzf() {
 	$HOME/.fzf/install
 }
 
+function install_tmux() {
+	if ! which tmux; then
+		sudo apt install tmux
+	fi
+	if ! copy .tmux.conf $HOME/.tmux.conf; then
+		return 1
+	fi
+	tmux source-file $HOME/.tmux.conf
+}
+
+install_tmux
 install_fzf
 install_vimrc
 install_bashrc
