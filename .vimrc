@@ -28,8 +28,10 @@ Plugin 'VundleVim/Vundle.vim'
 " Plugin 'ycm-core/YouCompleteMe'
 Plugin 'preservim/nerdtree'
 Plugin 'morhetz/gruvbox'
-Plugin 'kien/ctrlp.vim'
+" Plugin 'kien/ctrlp.vim'
 Plugin 'vim-airline/vim-airline'
+Plugin 'junegunn/fzf'
+Plugin 'junegunn/fzf.vim'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -59,8 +61,8 @@ autocmd vimenter * ++nested colorscheme gruvbox
 " autocmd vimenter * ++nested colorscheme gruvbox " Use this for older versions if you get this error: autocmd vimenter * ++nested colorscheme gruvbox
 
 "CtrlP settings
-set runtimepath^=~/.vim/bundle/ctrlp.vim
-let g:ctrlp_show_hidden = 1
+" set runtimepath^=~/.vim/bundle/ctrlp.vim
+" let g:ctrlp_show_hidden = 1
 
 "gruvbox settings
 set bg=dark
@@ -85,7 +87,7 @@ set visualbell
 set noerrorbells
 set backspace=indent,eol,start
 
-nmap <leader>p :CtrlP<cr>
+nmap <leader>p :Files<cr>
 map <leader>b :NERDTree<CR>
 map <F5> :w <CR> :!g++ % -o %< -lrt && ./%< <CR>
 map <leader><tab> :bn<CR>
