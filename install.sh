@@ -238,5 +238,6 @@ ensure_bashrc_sourcing
 configure_vim
 configure_tmux
 install_lazyvim
+install_fd
 
 echo "✅ Setup complete! Restart your terminal to apply changes."
