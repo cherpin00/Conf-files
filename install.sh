@@ -45,12 +45,20 @@ function symlink_file() {
   src=$1
   dst=$2
 
-  if [ -L "$dst" ]; then
-    if [ "$(readlink "$dst")" != "$src" ]; then
-      echo "Removing incorrect symlink: $dst"
-      rm -f "$dst"
-    fi
-  elif [ -e "$dst" ]; then
+  # If the destination is a correct symlink, do nothing
+  if [ -L "$dst" ] && [ "$(readlink "$dst")" == "$src" ]; then
+    echo "Symlink already exists: $dst → $src (skipping)"
+    return 0
+  fi
+
+  # If the destination is an incorrect symlink, remove it
+  if [ -L "$dst" ] && [ "$(readlink "$dst")" != "$src" ]; then
+    echo "Removing incorrect symlink: $dst"
+    rm -f "$dst"
+  fi
+
+  # If the destination is a regular file or directory, prompt for overwrite
+  if [ -e "$dst" ] && [ ! -L "$dst" ]; then
     echo "$dst already exists and is not a symlink."
     while true; do
       read -p "Do you want to overwrite it? [y] yes (default), [s] skip, [c] cancel: " ysc
@@ -59,7 +67,10 @@ function symlink_file() {
         rm -rf "$dst"
         break
         ;;
-      [Ss]*) return 0 ;; # Skip and continue
+      [Ss]*)
+        echo "Skipping $dst"
+        return 0
+        ;; # Skip and continue
       [Cc]*)
         echo "Install cancelled."
         exit 1
@@ -90,7 +101,9 @@ function symlink_bashrc_d() {
   # Ensure there are actual files before looping to avoid unwanted "*"
   if compgen -G "$DOTFILES_DIR/bashrc.d/*" >/dev/null; then
     for script in "$DOTFILES_DIR/bashrc.d/"*; do
-      [ -f "$script" ] && symlink_file "$script" "$BASHRC_D_DIR/$(basename "$script")"
+      if [ -f "$script" ]; then
+        symlink_file "$script" "$BASHRC_D_DIR/$(basename "$script")"
+      fi
     done
   else
     echo "No bashrc.d scripts found."
@@ -103,7 +116,7 @@ function ensure_bashrc_sourcing() {
     cat <<EOF >>"$HOME/.bashrc"
 
 # Load additional configuration scripts from ~/.bashrc.d/
-if [ -d "$HOME/.bashrc.d" ]; then
+if [ -d "\$HOME/.bashrc.d" ]; then
     for rc in "\$HOME/.bashrc.d/"*; do
         [ -f "\$rc" ] && source "\$rc"
     done
