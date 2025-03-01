@@ -17,6 +17,7 @@ function copy() {
 }
 
 function install_vimrc() {
+	git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
 	if ! copy .vimrc $HOME/.vimrc; then
 		return 1
 	fi
