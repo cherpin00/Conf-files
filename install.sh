@@ -3,9 +3,9 @@ set -e # Exit immediately on error
 
 # Get the directory of the script
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES=("bashrc" "vimrc" "tmux.conf") # No dots in repo filenames
-BASHRC_D_DIR="$HOME/.bashrc.d"          # Location for bashrc.d scripts
-NVIM_CONFIG_DIR="$HOME/.config/nvim"    # Neovim config directory
+DOTFILES=("vimrc" "tmux.conf")       # No dots in repo filenames
+BASHRC_D_DIR="$HOME/.bashrc.d"       # Location for bashrc.d scripts
+NVIM_CONFIG_DIR="$HOME/.config/nvim" # Neovim config directory
 
 # Check if sudo is available
 if command -v sudo &>/dev/null; then
