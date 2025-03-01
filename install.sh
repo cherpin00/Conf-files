@@ -86,9 +86,14 @@ function symlink_bashrc_d() {
   echo "Symlinking bashrc.d scripts..."
   mkdir -p "$BASHRC_D_DIR"
 
-  for script in "$DOTFILES_DIR/bashrc.d/"*; do
-    symlink_file "$script" "$BASHRC_D_DIR/$(basename "$script")"
-  done
+  # Ensure there are actual files before looping to avoid unwanted "*"
+  if compgen -G "$DOTFILES_DIR/bashrc.d/*" >/dev/null; then
+    for script in "$DOTFILES_DIR/bashrc.d/"*; do
+      [ -f "$script" ] && symlink_file "$script" "$BASHRC_D_DIR/$(basename "$script")"
+    done
+  else
+    echo "No bashrc.d scripts found."
+  fi
 }
 
 function ensure_bashrc_sourcing() {
