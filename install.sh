@@ -202,6 +202,34 @@ function configure_tmux() {
   fi
 }
 
+function install_fd() {
+  echo "Installing fd..."
+
+  # Check if fd is already installed
+  if command -v fd &>/dev/null; then
+    echo "fd is already installed. Skipping installation."
+    return
+  fi
+
+  # Install fd using apt (package name is fd-find)
+  echo "Using apt to install fd-find..."
+  $SUDO apt update && $SUDO apt install -y fd-find
+
+  # Ensure fd is available as 'fd' (Debian installs it as 'fdfind')
+  if ! command -v fd &>/dev/null && command -v fdfind &>/dev/null; then
+    echo "Creating 'fd' symlink for compatibility..."
+    $SUDO ln -s $(which fdfind) /usr/local/bin/fd
+  fi
+
+  # Verify fd installation
+  if ! command -v fd &>/dev/null; then
+    echo "❌ fd installation failed." >&2
+    exit 1
+  fi
+
+  echo "✅ fd installed successfully."
+}
+
 # Run installation steps
 install_packages
 symlink_dotfiles
