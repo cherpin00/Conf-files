@@ -5,6 +5,7 @@ set -e # Exit immediately on error
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES=("bashrc" "vimrc" "tmux.conf") # No dots in repo filenames
 BASHRC_D_DIR="$HOME/.bashrc.d"          # Location for bashrc.d scripts
+NVIM_CONFIG_DIR="$HOME/.config/nvim"    # Neovim config directory
 
 # Check if sudo is available
 if command -v sudo &>/dev/null; then
@@ -12,6 +13,28 @@ if command -v sudo &>/dev/null; then
 else
   SUDO=""
 fi
+
+function install_neovim() {
+  echo "Installing Neovim..."
+
+  # Check if Neovim is already installed
+  if command -v nvim &>/dev/null; then
+    echo "Neovim is already installed. Skipping installation."
+    return
+  fi
+
+  # Install Neovim using apt
+  echo "Using apt to install Neovim..."
+  $SUDO apt update && $SUDO apt install -y neovim
+
+  # Verify Neovim installation
+  if ! command -v nvim &>/dev/null; then
+    echo "❌ Neovim installation failed." >&2
+    exit 1
+  fi
+
+  echo "✅ Neovim installed successfully."
+}
 
 function install_packages() {
   echo "Installing required packages..."
@@ -39,6 +62,8 @@ function install_packages() {
   if ! command -v git &>/dev/null; then
     $SUDO apt install -y git
   fi
+
+  install_neovim
 }
 
 function symlink_file() {
@@ -110,6 +135,33 @@ function symlink_bashrc_d() {
   fi
 }
 
+function install_lazyvim() {
+  echo "Installing LazyVim..."
+
+  # Ensure Neovim config directory exists
+  mkdir -p "$NVIM_CONFIG_DIR"
+
+  # Clone LazyVim starter config if the directory is empty
+  if [ ! "$(ls -A $NVIM_CONFIG_DIR)" ]; then
+    echo "Cloning LazyVim starter template..."
+    git clone https://github.com/LazyVim/starter "$NVIM_CONFIG_DIR"
+  fi
+
+  # Ensure all Neovim dotfiles from the repo are symlinked
+  if [ -d "$DOTFILES_DIR/nvim" ]; then
+    echo "Symlinking Neovim configuration..."
+    for file in "$DOTFILES_DIR/nvim/"*; do
+      symlink_file "$file" "$NVIM_CONFIG_DIR/$(basename "$file")"
+    done
+  else
+    echo "No Neovim config found in dotfiles repo."
+  fi
+
+  # Install LazyVim plugins
+  echo "Installing LazyVim plugins..."
+  nvim --headless "+Lazy! sync" +qa
+}
+
 function ensure_bashrc_sourcing() {
   if ! grep -q "bashrc.d" "$HOME/.bashrc"; then
     echo "Adding ~/.bashrc.d sourcing to ~/.bashrc..."
@@ -157,5 +209,6 @@ symlink_bashrc_d
 ensure_bashrc_sourcing
 configure_vim
 configure_tmux
+install_lazyvim
 
 echo "✅ Setup complete! Restart your terminal to apply changes."
