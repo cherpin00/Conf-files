@@ -157,6 +157,16 @@ function install_lazyvim() {
   if [ ! -f "$DOTFILES_DIR/nvim/init.lua" ]; then
     echo "Cloning LazyVim starter template..."
     git clone https://github.com/LazyVim/starter "$DOTFILES_DIR/nvim"
+
+    # Remove .git folder to prevent nested Git repo issues
+    rm -rf "$DOTFILES_DIR/nvim/.git"
+    echo "Removed .git folder from LazyVim config to avoid nested Git issues."
+
+    # Commit the initial LazyVim setup to the dotfiles Git repo
+    cd "$DOTFILES_DIR"
+    git add nvim
+    git commit -m "Added LazyVim starter config"
+    cd -
   fi
 
   # Install LazyVim plugins
