@@ -4,12 +4,19 @@ set -e # Exit immediately on error
 DOTFILES_DIR="$HOME/.dotfiles"
 DOTFILES=("bashrc" "vimrc" "tmux.conf") # No dots in repo filenames
 
+# Check if sudo is available
+if command -v sudo &>/dev/null; then
+  SUDO="sudo"
+else
+  SUDO=""
+fi
+
 function install_packages() {
   echo "Installing required packages..."
 
   # Install tmux if not installed
   if ! command -v tmux &>/dev/null; then
-    sudo apt install -y tmux
+    $SUDO apt install -y tmux
   fi
 
   # Install fzf if not installed
@@ -20,7 +27,7 @@ function install_packages() {
 
   # Install Vim and Vundle if not installed
   if ! command -v vim &>/dev/null; then
-    sudo apt install -y vim
+    $SUDO apt install -y vim
   fi
   if [ ! -d "$HOME/.vim/bundle/Vundle.vim" ]; then
     git clone --depth 1 https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
@@ -28,7 +35,7 @@ function install_packages() {
 
   # Install git if not installed
   if ! command -v git &>/dev/null; then
-    sudo apt install -y git
+    $SUDO apt install -y git
   fi
 }
 
@@ -106,3 +113,5 @@ symlink_dotfiles
 configure_bash
 configure_vim
 configure_tmux
+
+echo "✅ Setup complete! Restart your terminal."
