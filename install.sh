@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e # Exit immediately on error
 
-DOTFILES_DIR="$HOME/.dotfiles"
+# Get the directory of the script
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES=("bashrc" "vimrc" "tmux.conf") # No dots in repo filenames
 
 # Check if sudo is available
@@ -113,5 +114,3 @@ symlink_dotfiles
 configure_bash
 configure_vim
 configure_tmux
-
-echo "✅ Setup complete! Restart your terminal."
