@@ -132,7 +132,22 @@ function configure_vim() {
 
 function configure_tmux() {
   echo "Configuring tmux..."
-  tmux source-file "$HOME/.tmux.conf"
+
+  # Ensure tmux is installed
+  if ! command -v tmux &>/dev/null; then
+    echo "tmux is not installed, skipping configuration."
+    return
+  fi
+
+  # Check if a tmux server is running before sourcing the config
+  if tmux info &>/dev/null; then
+    echo "Reloading tmux configuration..."
+    tmux source-file "$HOME/.tmux.conf"
+  else
+    echo "No running tmux session found. Starting a new session..."
+    tmux new-session -d
+    tmux source-file "$HOME/.tmux.conf"
+  fi
 }
 
 # Run installation steps
