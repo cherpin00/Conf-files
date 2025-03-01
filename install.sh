@@ -24,8 +24,8 @@ function install_packages() {
   # Install fzf if not installed
   if [ ! -d "$HOME/.fzf" ]; then
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    ~/.fzf/install --all
   fi
+  ~/.fzf/install --all
 
   # Install Vim and Vundle if not installed
   if ! command -v vim &>/dev/null; then
