@@ -45,14 +45,15 @@ function symlink_file() {
   src=$1
   dst=$2
 
-  if [ -L "$dst" ] && [ "$(readlink "$dst")" != "$src" ]; then
-    echo "Removing incorrect symlink: $dst"
-    rm -f "$dst"
-  fi
-
-  if [ -e "$dst" ] && [ ! -L "$dst" ]; then
+  if [ -L "$dst" ]; then
+    if [ "$(readlink "$dst")" != "$src" ]; then
+      echo "Removing incorrect symlink: $dst"
+      rm -f "$dst"
+    fi
+  elif [ -e "$dst" ]; then
+    echo "$dst already exists and is not a symlink."
     while true; do
-      read -p "$dst already exists. Overwrite? [y] yes (default), [s] skip, [c] cancel: " ysc
+      read -p "Do you want to overwrite it? [y] yes (default), [s] skip, [c] cancel: " ysc
       case $ysc in
       [Yy]*)
         rm -rf "$dst"
