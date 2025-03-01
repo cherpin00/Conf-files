@@ -138,23 +138,25 @@ function symlink_bashrc_d() {
 function install_lazyvim() {
   echo "Installing LazyVim..."
 
-  # Ensure Neovim config directory exists
-  mkdir -p "$NVIM_CONFIG_DIR"
+  # Ensure Neovim config directory exists in the dotfiles repo
+  mkdir -p "$DOTFILES_DIR/nvim"
 
-  # Clone LazyVim starter config if the directory is empty
-  if [ ! "$(ls -A $NVIM_CONFIG_DIR)" ]; then
-    echo "Cloning LazyVim starter template..."
-    git clone https://github.com/LazyVim/starter "$NVIM_CONFIG_DIR"
+  # Remove existing ~/.config/nvim if it's not already a symlink
+  if [ -d "$HOME/.config/nvim" ] && [ ! -L "$HOME/.config/nvim" ]; then
+    echo "Removing existing Neovim config directory..."
+    rm -rf "$HOME/.config/nvim"
   fi
 
-  # Ensure all Neovim dotfiles from the repo are symlinked
-  if [ -d "$DOTFILES_DIR/nvim" ]; then
-    echo "Symlinking Neovim configuration..."
-    for file in "$DOTFILES_DIR/nvim/"*; do
-      symlink_file "$file" "$NVIM_CONFIG_DIR/$(basename "$file")"
-    done
-  else
-    echo "No Neovim config found in dotfiles repo."
+  # Create a symlink from ~/.config/nvim to dotfiles/nvim
+  if [ ! -L "$HOME/.config/nvim" ]; then
+    ln -s "$DOTFILES_DIR/nvim" "$HOME/.config/nvim"
+    echo "Symlinked: $HOME/.config/nvim → $DOTFILES_DIR/nvim"
+  fi
+
+  # Clone LazyVim starter config if it's missing in your Git repo
+  if [ ! -f "$DOTFILES_DIR/nvim/init.lua" ]; then
+    echo "Cloning LazyVim starter template..."
+    git clone https://github.com/LazyVim/starter "$DOTFILES_DIR/nvim"
   fi
 
   # Install LazyVim plugins
