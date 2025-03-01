@@ -4,6 +4,7 @@ set -e # Exit immediately on error
 # Get the directory of the script
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES=("bashrc" "vimrc" "tmux.conf") # No dots in repo filenames
+BASHRC_D_DIR="$HOME/.bashrc.d"          # Location for bashrc.d scripts
 
 # Check if sudo is available
 if command -v sudo &>/dev/null; then
@@ -40,62 +41,69 @@ function install_packages() {
   fi
 }
 
+function symlink_file() {
+  src=$1
+  dst=$2
+
+  if [ -L "$dst" ] && [ "$(readlink "$dst")" != "$src" ]; then
+    echo "Removing incorrect symlink: $dst"
+    rm -f "$dst"
+  fi
+
+  if [ -e "$dst" ] && [ ! -L "$dst" ]; then
+    while true; do
+      read -p "$dst already exists. Overwrite? [y] yes (default), [s] skip, [c] cancel: " ysc
+      case $ysc in
+      [Yy]*)
+        rm -rf "$dst"
+        break
+        ;;
+      [Ss]*) return 0 ;; # Skip and continue
+      [Cc]*)
+        echo "Install cancelled."
+        exit 1
+        ;;
+      *)
+        rm -rf "$dst"
+        break
+        ;;
+      esac
+    done
+  fi
+
+  ln -s "$src" "$dst"
+  echo "Symlinked: $dst → $src"
+}
+
 function symlink_dotfiles() {
   echo "Symlinking dotfiles..."
   for file in "${DOTFILES[@]}"; do
-    src="$DOTFILES_DIR/$file" # No dot in repo
-    dst="$HOME/.$file"        # Symlink with dot in home directory
-
-    if [ -L "$dst" ] && [ "$(readlink "$dst")" != "$src" ]; then
-      echo "Removing incorrect symlink: $dst"
-      rm -f "$dst"
-    fi
-
-    if [ -e "$dst" ] && [ ! -L "$dst" ]; then
-      while true; do
-        read -p "$dst already exists. Overwrite? [y] yes (default), [s] skip, [c] cancel: " ysc
-        case $ysc in
-        [Yy]*)
-          rm -rf "$dst"
-          break
-          ;;
-        [Ss]*) continue ;;
-        [Cc]*)
-          echo "Install cancelled."
-          exit 1
-          ;;
-        *)
-          rm -rf "$dst"
-          break
-          ;;
-        esac
-      done
-    fi
-
-    ln -s "$src" "$dst"
-    echo "Symlinked: $dst → $src"
+    symlink_file "$DOTFILES_DIR/$file" "$HOME/.$file"
   done
 }
 
-function configure_bash() {
-  echo "Configuring Bash..."
-  mkdir -p "$HOME/.bashrc.d"
+function symlink_bashrc_d() {
+  echo "Symlinking bashrc.d scripts..."
+  mkdir -p "$BASHRC_D_DIR"
 
-  if ! grep -q "User specific aliases and functions" "$HOME/.bashrc"; then
+  for script in "$DOTFILES_DIR/bashrc.d/"*; do
+    symlink_file "$script" "$BASHRC_D_DIR/$(basename "$script")"
+  done
+}
+
+function ensure_bashrc_sourcing() {
+  if ! grep -q "bashrc.d" "$HOME/.bashrc"; then
+    echo "Adding ~/.bashrc.d sourcing to ~/.bashrc..."
     cat <<EOF >>"$HOME/.bashrc"
 
-# User specific aliases and functions
-if [ -d ~/.bashrc.d ]; then
-    for rc in ~/.bashrc.d/*; do
+# Load additional configuration scripts from ~/.bashrc.d/
+if [ -d "$HOME/.bashrc.d" ]; then
+    for rc in "\$HOME/.bashrc.d/"*; do
         [ -f "\$rc" ] && source "\$rc"
     done
 fi
 EOF
   fi
-
-  for rc in "$HOME/.bashrc.d/"*; do
-    [ -f "$rc" ] && source "$rc"
-  done
 }
 
 function configure_vim() {
@@ -111,6 +119,9 @@ function configure_tmux() {
 # Run installation steps
 install_packages
 symlink_dotfiles
-configure_bash
+symlink_bashrc_d
+ensure_bashrc_sourcing
 configure_vim
 configure_tmux
+
+echo "✅ Setup complete! Restart your terminal to apply changes."
