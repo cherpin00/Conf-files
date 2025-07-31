@@ -53,6 +53,9 @@
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
 
+      # Primary user for homebrew and other user-specific options
+      system.primaryUser = "cherpin";
+
       # Application activation script
       system.activationScripts.applications.text = let
         env = pkgs.buildEnv {
@@ -73,6 +76,25 @@
           ${pkgs.mkalias}/bin/mkalias "$src" "/Applications/Nix Apps/$app_name"
         done
       '';
+
+      # Homebrew packages
+      homebrew = {
+        enable = true;
+        brews = [
+          "mas"
+          "jq"
+        ];
+        casks = [
+          "firefox"
+          "alfred"
+          "aerospace"
+          "font-fira-code-nerd-font"
+        ];
+        masApps = {
+          "Yoink" = 408981434;
+        };
+        onActivation.cleanup = "zap";
+      };
     };
   in
   {
