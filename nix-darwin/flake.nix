@@ -56,6 +56,39 @@
       # Primary user for homebrew and other user-specific options
       system.primaryUser = "cherpin";
 
+      # Configure Touch ID for sudo
+      environment.etc."pam.d/sudo_local".text = ''
+        auth       sufficient     pam_tid.so
+      '';
+
+      # System defaults
+      system.defaults = {
+        dock = {
+          autohide = true;
+          autohide-delay = 0.0;
+          autohide-time-modifier = 0.2;
+          show-recents = false;
+          static-only = true;
+          persistent-apps = [
+            "/Applications/Nix Apps/iTerm2.app"
+            "/Applications/Google Chrome.app"
+            "/System/Applications/Finder.app"
+            "/System/Applications/Launchpad.app"
+          ];
+        };
+        finder = {
+          AppleShowAllExtensions = true;
+          ShowPathbar = true;
+          ShowStatusBar = true;
+        };
+        NSGlobalDomain = {
+          AppleShowAllExtensions = true;
+          InitialKeyRepeat = 14;
+          KeyRepeat = 1;
+          AppleInterfaceStyle = "Dark";
+        };
+      };
+
       # Application activation script
       system.activationScripts.applications.text = let
         env = pkgs.buildEnv {
@@ -83,6 +116,7 @@
         brews = [
           "mas"
           "jq"
+          "starship"
         ];
         casks = [
           "firefox"
@@ -94,6 +128,8 @@
           "Yoink" = 408981434;
         };
         onActivation.cleanup = "zap";
+        onActivation.autoUpdate = true;
+        # onActivation.autoUpgrade = true;
       };
     };
   in
