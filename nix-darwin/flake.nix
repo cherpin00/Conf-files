@@ -37,6 +37,7 @@
           pkgs.obsidian
           pkgs.google-chrome
           pkgs.openvpn
+          pkgs.aerospace
         ];
 
       # Necessary for using flakes on this system.
@@ -222,7 +223,6 @@
         casks = [
           "firefox"
           "alfred"
-          "aerospace"
           "font-fira-code-nerd-font"
           "scroll-reverser"
           "alt-tab"
