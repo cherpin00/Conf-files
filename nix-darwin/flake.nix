@@ -112,6 +112,21 @@
         done
       '';
 
+
+      # Ensure Xcode Command Line Tools are installed (required for Homebrew)
+      system.activationScripts.xcodeTools.text = ''
+        echo "Checking Xcode Command Line Tools (required for Homebrew)..." >&2
+        if ! xcode-select -p &> /dev/null; then
+          echo "Installing Xcode Command Line Tools..." >&2
+          xcode-select --install
+          echo "Xcode Command Line Tools installation initiated." >&2
+          echo "Please complete the installation in the GUI dialog, then re-run darwin-rebuild." >&2
+          exit 1
+        else
+          echo "Xcode Command Line Tools already installed at $(xcode-select -p)" >&2
+        fi
+      '';
+
       # Setup dotfiles repository and symlink dotfiles
       system.activationScripts.setupDotfiles.text = ''
         echo "Setting up dotfiles repository..." >&2
