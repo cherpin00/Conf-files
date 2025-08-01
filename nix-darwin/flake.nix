@@ -6,6 +6,10 @@
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
 
+    # home-manager for managing user dotfiles and configurations
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+
     # nix-homebrew for managing Homebrew installations
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
 
@@ -20,7 +24,7 @@
     };
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, nix-homebrew, homebrew-core, homebrew-cask }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, nix-homebrew, homebrew-core, homebrew-cask }:
   let
     configuration = { pkgs, config, ... }: {
       # List packages installed in system profile. To search by name, run:
@@ -110,6 +114,28 @@
         done
       '';
 
+      # Setup dotfiles repository
+      system.activationScripts.setupDotfiles.text = ''
+        echo "Setting up dotfiles repository..." >&2
+
+        # Create ~/code directory if it doesn't exist
+        mkdir -p /Users/cherpin/code
+
+        # Clone or update Conf-files repository
+        if [ ! -d "/Users/cherpin/code/Conf-files" ]; then
+          echo "Cloning Conf-files repository..." >&2
+          cd /Users/cherpin/code
+          ${pkgs.git}/bin/git clone https://github.com/cherpin/Conf-files.git
+        else
+          echo "Updating Conf-files repository..." >&2
+          cd /Users/cherpin/code/Conf-files
+          ${pkgs.git}/bin/git pull origin main || ${pkgs.git}/bin/git pull origin master || true
+        fi
+
+        # Set proper ownership
+        chown -R cherpin:staff /Users/cherpin/code/Conf-files
+      '';
+
       # Homebrew packages
       homebrew = {
         enable = true;
@@ -140,6 +166,7 @@
       modules = [
         configuration
         nix-homebrew.darwinModules.nix-homebrew
+        home-manager.darwinModules.home-manager
         {
           nix-homebrew = {
             # Install Homebrew under the default prefix
@@ -164,6 +191,36 @@
             # With mutableTaps disabled, taps can no longer be added imperatively with `brew tap`.
             # Temporarily set to true for initial migration
             mutableTaps = true;
+          };
+
+          # Home Manager configuration
+          home-manager = {
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            users.cherpin = { pkgs, ... }: {
+              home.stateVersion = "24.05";
+
+              # Neovim configuration
+              home.file.".config/nvim" = {
+                source = /Users/cherpin/code/Conf-files/nvim;
+                recursive = true;
+              };
+
+              # Tmux configuration
+              home.file.".tmux.conf".source = /Users/cherpin/code/Conf-files/tmux.conf;
+
+              # Bash configuration
+              home.file.".bashrc".source = /Users/cherpin/code/Conf-files/bashrc;
+              home.file.".bashrc.d" = {
+                source = /Users/cherpin/code/Conf-files/bashrc.d;
+                recursive = true;
+              };
+
+              # Enable programs
+              programs.neovim.enable = true;
+              programs.tmux.enable = true;
+              programs.bash.enable = true;
+            };
           };
         }
       ];
