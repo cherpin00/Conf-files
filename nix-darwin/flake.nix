@@ -39,6 +39,8 @@
           pkgs.tmux
           pkgs.iterm2
           pkgs.obsidian
+          pkgs.google-chrome
+          pkgs.openvpn
         ];
 
       # Necessary for using flakes on this system.
@@ -149,6 +151,10 @@
           "alfred"
           "aerospace"
           "font-fira-code-nerd-font"
+          "scroll-reverser"
+          "alt-tab"
+          "google-drive"
+          "windows-app"
         ];
         masApps = {
           "Yoink" = 408981434;
