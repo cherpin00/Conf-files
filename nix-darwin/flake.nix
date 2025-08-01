@@ -138,6 +138,37 @@
         chown -R cherpin:staff /Users/cherpin/code/Conf-files
       '';
 
+      # Configure Scroll Reverser preferences
+      system.activationScripts.scrollReverserPrefs.text = ''
+        echo "Configuring Scroll Reverser preferences..." >&2
+        sudo -u cherpin defaults write com.pilotmoon.scroll-reverser ReverseScrolling -bool true
+        sudo -u cherpin defaults write com.pilotmoon.scroll-reverser ReverseTrackpad -bool false
+        sudo -u cherpin defaults write com.pilotmoon.scroll-reverser ReverseMouse -bool true
+        sudo -u cherpin defaults write com.pilotmoon.scroll-reverser StartAtLogin -bool true
+        echo "Scroll Reverser preferences configured." >&2
+      '';
+
+      # Launch agents for GUI applications
+      launchd.user.agents = {
+        scroll-reverser = {
+          serviceConfig = {
+            ProgramArguments = [ "/Applications/Scroll Reverser.app/Contents/MacOS/Scroll Reverser" ];
+            RunAtLoad = true;
+            KeepAlive = false;
+            ProcessType = "Interactive";
+          };
+        };
+
+        alt-tab = {
+          serviceConfig = {
+            ProgramArguments = [ "/Applications/AltTab.app/Contents/MacOS/AltTab" ];
+            RunAtLoad = true;
+            KeepAlive = true;
+            ProcessType = "Interactive";
+          };
+        };
+      };
+
       # Homebrew packages
       homebrew = {
         enable = true;
@@ -154,7 +185,7 @@
           "scroll-reverser"
           "alt-tab"
           "google-drive"
-          "windows-app"
+          "microsoft-remote-desktop"
         ];
         masApps = {
           "Yoink" = 408981434;
@@ -203,22 +234,25 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-            users.cherpin = { pkgs, ... }: {
+            users.cherpin = { pkgs, ... }:
+            let
+              dotfilesPath = "/Users/cherpin/code/Conf-files";
+            in {
               home.stateVersion = "24.05";
 
               # Neovim configuration
               home.file.".config/nvim" = {
-                source = /Users/cherpin/code/Conf-files/nvim;
+                source = "${dotfilesPath}/nvim";
                 recursive = true;
               };
 
               # Tmux configuration
-              home.file.".tmux.conf".source = /Users/cherpin/code/Conf-files/tmux.conf;
+              home.file.".tmux.conf".source = "${dotfilesPath}/tmux.conf";
 
               # Bash configuration
-              home.file.".bashrc".source = /Users/cherpin/code/Conf-files/bashrc;
+              home.file.".bashrc".source = "${dotfilesPath}/bashrc";
               home.file.".bashrc.d" = {
-                source = /Users/cherpin/code/Conf-files/bashrc.d;
+                source = "${dotfilesPath}/bashrc.d";
                 recursive = true;
               };
 
