@@ -6,10 +6,6 @@
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    # home-manager for managing user dotfiles and configurations
-    home-manager.url = "github:nix-community/home-manager";
-    home-manager.inputs.nixpkgs.follows = "nixpkgs";
-
     # nix-homebrew for managing Homebrew installations
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
 
@@ -24,7 +20,7 @@
     };
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, nix-homebrew, homebrew-core, homebrew-cask }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, nix-homebrew, homebrew-core, homebrew-cask }:
   let
     configuration = { pkgs, config, ... }: {
       # List packages installed in system profile. To search by name, run:
@@ -116,7 +112,7 @@
         done
       '';
 
-      # Setup dotfiles repository
+      # Setup dotfiles repository and symlink dotfiles
       system.activationScripts.setupDotfiles.text = ''
         echo "Setting up dotfiles repository..." >&2
 
@@ -136,6 +132,37 @@
 
         # Set proper ownership
         chown -R cherpin:staff /Users/cherpin/code/Conf-files
+
+        echo "Setting up dotfiles symlinks..." >&2
+
+        # Create .config directory if it doesn't exist
+        sudo -u cherpin mkdir -p /Users/cherpin/.config
+
+        # Symlink neovim config
+        if [ ! -L "/Users/cherpin/.config/nvim" ] && [ ! -d "/Users/cherpin/.config/nvim" ]; then
+          sudo -u cherpin ln -sf /Users/cherpin/code/Conf-files/nvim /Users/cherpin/.config/nvim
+          echo "Symlinked nvim config" >&2
+        fi
+
+        # Symlink tmux config
+        if [ ! -L "/Users/cherpin/.tmux.conf" ]; then
+          sudo -u cherpin ln -sf /Users/cherpin/code/Conf-files/tmux.conf /Users/cherpin/.tmux.conf
+          echo "Symlinked tmux config" >&2
+        fi
+
+        # Symlink bash config
+        if [ ! -L "/Users/cherpin/.bashrc" ]; then
+          sudo -u cherpin ln -sf /Users/cherpin/code/Conf-files/bashrc /Users/cherpin/.bashrc
+          echo "Symlinked bashrc" >&2
+        fi
+
+        # Symlink bashrc.d directory
+        if [ ! -L "/Users/cherpin/.bashrc.d" ] && [ ! -d "/Users/cherpin/.bashrc.d" ]; then
+          sudo -u cherpin ln -sf /Users/cherpin/code/Conf-files/bashrc.d /Users/cherpin/.bashrc.d
+          echo "Symlinked bashrc.d directory" >&2
+        fi
+
+        echo "Dotfiles setup complete." >&2
       '';
 
       # Configure Scroll Reverser preferences
@@ -185,7 +212,7 @@
           "scroll-reverser"
           "alt-tab"
           "google-drive"
-          "microsoft-remote-desktop"
+          "windows-app"
         ];
         masApps = {
           "Yoink" = 408981434;
@@ -203,7 +230,6 @@
       modules = [
         configuration
         nix-homebrew.darwinModules.nix-homebrew
-        home-manager.darwinModules.home-manager
         {
           nix-homebrew = {
             # Install Homebrew under the default prefix
@@ -228,39 +254,6 @@
             # With mutableTaps disabled, taps can no longer be added imperatively with `brew tap`.
             # Temporarily set to true for initial migration
             mutableTaps = true;
-          };
-
-          # Home Manager configuration
-          home-manager = {
-            useGlobalPkgs = true;
-            useUserPackages = true;
-            users.cherpin = { pkgs, ... }:
-            let
-              dotfilesPath = "/Users/cherpin/code/Conf-files";
-            in {
-              home.stateVersion = "24.05";
-
-              # Neovim configuration
-              home.file.".config/nvim" = {
-                source = "${dotfilesPath}/nvim";
-                recursive = true;
-              };
-
-              # Tmux configuration
-              home.file.".tmux.conf".source = "${dotfilesPath}/tmux.conf";
-
-              # Bash configuration
-              home.file.".bashrc".source = "${dotfilesPath}/bashrc";
-              home.file.".bashrc.d" = {
-                source = "${dotfilesPath}/bashrc.d";
-                recursive = true;
-              };
-
-              # Enable programs
-              programs.neovim.enable = true;
-              programs.tmux.enable = true;
-              programs.bash.enable = true;
-            };
           };
         }
       ];
