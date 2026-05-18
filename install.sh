@@ -214,6 +214,25 @@ function configure_tmux() {
   fi
 }
 
+function install_starship() {
+  echo "Installing Starship prompt..."
+
+  if [ -x "$HOME/.cargo/bin/starship" ]; then
+    echo "Starship is already installed. Skipping installation."
+    return
+  fi
+
+  mkdir -p "$HOME/.cargo/bin"
+  curl -sS https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.cargo/bin"
+
+  if [ ! -x "$HOME/.cargo/bin/starship" ]; then
+    echo "❌ Starship installation failed." >&2
+    exit 1
+  fi
+
+  echo "✅ Starship installed successfully."
+}
+
 function install_fd() {
   echo "Installing fd..."
 
@@ -251,5 +270,6 @@ configure_vim
 configure_tmux
 install_lazyvim
 install_fd
+install_starship
 
 echo "✅ Setup complete! Restart your terminal to apply changes."
