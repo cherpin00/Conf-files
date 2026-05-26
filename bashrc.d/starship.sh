@@ -1,6 +1,4 @@
-[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
-
-if [ -x "$HOME/.cargo/bin/starship" ]; then
-  export PATH="$HOME/.cargo/bin:$PATH"
-  eval "$("$HOME/.cargo/bin/starship" init bash)"
+if [ -x "$HOME/.config/bin/starship" ]; then
+  export PATH="$HOME/.config/bin:$PATH"
+  eval "$("$HOME/.config/bin/starship" init bash)"
 fi

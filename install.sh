@@ -217,15 +217,20 @@ function configure_tmux() {
 function install_starship() {
   echo "Installing Starship prompt..."
 
-  if [ -x "$HOME/.cargo/bin/starship" ]; then
+  STARSHIP_BIN="$HOME/.config/bin/starship"
+
+  if [ -x "$STARSHIP_BIN" ]; then
     echo "Starship is already installed. Skipping installation."
     return
   fi
 
-  mkdir -p "$HOME/.cargo/bin"
-  curl -sS https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.cargo/bin"
+  mkdir -p "$HOME/.config/bin"
+  curl -Lo /tmp/starship.tar.gz \
+    https://github.com/starship/starship/releases/latest/download/starship-x86_64-unknown-linux-gnu.tar.gz
+  tar -xzf /tmp/starship.tar.gz -C "$HOME/.config/bin"
+  rm -f /tmp/starship.tar.gz
 
-  if [ ! -x "$HOME/.cargo/bin/starship" ]; then
+  if [ ! -x "$STARSHIP_BIN" ]; then
     echo "❌ Starship installation failed." >&2
     exit 1
   fi
