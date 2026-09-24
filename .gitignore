@@ -1,2 +1,9 @@
 nvim/lazy-lock.json
 .DS_Store
+
+# Scratch working copies driven by tmux-preview -- iterate here, then
+# `tmux-preview promote` copies them over the real tmux.conf/tmux-theme.conf.
+*.dev.conf
+
+# Timestamped backups written by `tmux-preview promote`
+*.bak.*

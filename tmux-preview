@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# tmux-preview -- iterate on tmux.dev.conf in a throwaway tmux server.
+#
+# Runs a SECOND tmux server on its own socket with its own config file, so
+# nothing here can touch the sessions on your default socket. Different
+# server = different config, different sessions, different plugin state.
+#
+#   tmux-preview            attach to the preview server (creating it if needed)
+#   tmux-preview sync       (re)create dev.conf from the live config, discarding
+#                           any uncommitted experiment in it
+#   tmux-preview reload     re-source dev.conf into the running preview server
+#   tmux-preview restart    kill and recreate the preview server from scratch
+#   tmux-preview kill       kill the preview server
+#   tmux-preview promote    install dev.conf as your real tmux.conf (backs up first)
+#   tmux-preview diff       show dev.conf vs live tmux.conf
+#
+# The .dev.conf files are gitignored scratch, so a fresh clone has none; sync
+# runs automatically when they are missing.
+#
+# Inside the preview server the prefix is C-a (not C-q), so you can run it
+# nested inside your real tmux session without the two fighting over keys.
+
+set -euo pipefail
+
+CONF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEV_CONF="$CONF_DIR/tmux.dev.conf"
+LIVE_CONF="$CONF_DIR/tmux.conf"
+DEV_THEME="$CONF_DIR/tmux-theme.dev.conf"
+LIVE_THEME="$CONF_DIR/tmux-theme.conf"
+SOCKET="uidev"
+SESSION="preview"
+
+tm() { tmux -L "$SOCKET" -f "$DEV_CONF" "$@"; }
+
+server_running() { tmux -L "$SOCKET" has-session -t "$SESSION" 2>/dev/null; }
+
+# Rebuild the scratch pair from the live config. The inverse of promote: there
+# the dev theme path is rewritten to the live one, here the live path is
+# rewritten back to the dev one, so iterating never touches the real theme.
+# The ~/.tmux-theme.dev.conf symlink is this script's job -- install.sh only
+# knows about the committed files.
+sync_dev() {
+  sed 's|\.tmux-theme\.conf|.tmux-theme.dev.conf|' "$LIVE_CONF" > "$DEV_CONF"
+  cp "$LIVE_THEME" "$DEV_THEME"
+  ln -sfn "$DEV_THEME" "$HOME/.tmux-theme.dev.conf"
+}
+
+have_dev() { [ -f "$DEV_CONF" ] && [ -f "$DEV_THEME" ]; }
+
+# Build a session with enough shape that the status bar has something to show:
+# several windows, a split, an active/inactive pane pair.
+seed() {
+  tm new-session  -d -s "$SESSION" -n editor -c "$HOME/code"
+  tm split-window -h -t "$SESSION:editor" -c "$HOME/code"
+  # Address panes positionally -- pane-base-index makes numeric ids config-dependent.
+  tm send-keys    -t "$SESSION:editor.{left}"  'clear; echo "left pane - active border + style"' C-m
+  tm send-keys    -t "$SESSION:editor.{right}" 'clear; echo "right pane - inactive border + style"' C-m
+
+  tm new-window   -t "$SESSION:" -n k8s -c "$HOME/code"
+  tm send-keys    -t "$SESSION:k8s" 'clear; echo "second window"' C-m
+
+  tm new-window   -t "$SESSION:" -n logs -c "$HOME"
+  tm send-keys    -t "$SESSION:logs" 'clear; echo "third window - long-ish name to test truncation"' C-m
+
+  tm new-window   -t "$SESSION:" -n a-very-long-window-name-here -c "$HOME"
+  tm send-keys    -t "$SESSION:a-very-long-window-name-here" 'clear; echo "name truncation test"' C-m
+
+  tm select-window -t "$SESSION:editor"
+  tm select-pane   -t "$SESSION:editor.{left}"
+}
+
+cmd="${1:-attach}"
+
+# Anything that reads the dev files needs them to exist first.
+case "$cmd" in
+  attach|""|reload|restart|diff|promote)
+    have_dev || { sync_dev; echo "created $DEV_CONF and $DEV_THEME from the live config"; }
+    ;;
+esac
+
+case "$cmd" in
+  attach|"")
+    server_running || seed
+    exec tmux -L "$SOCKET" attach -t "$SESSION"
+    ;;
+  sync)
+    sync_dev
+    echo "synced from the live config:"
+    echo "  $LIVE_CONF  -> $DEV_CONF"
+    echo "  $LIVE_THEME -> $DEV_THEME"
+    ;;
+  reload)
+    server_running || { echo "preview server not running; start it with: tmux-preview" >&2; exit 1; }
+    tmux -L "$SOCKET" source-file "$DEV_CONF"
+    echo "reloaded $DEV_CONF into preview server"
+    ;;
+  restart)
+    tmux -L "$SOCKET" kill-server 2>/dev/null || true
+    seed
+    exec tmux -L "$SOCKET" attach -t "$SESSION"
+    ;;
+  kill)
+    tmux -L "$SOCKET" kill-server 2>/dev/null && echo "preview server killed" || echo "preview server was not running"
+    ;;
+  diff)
+    diff -u "$LIVE_CONF" "$DEV_CONF" || true
+    [ -f "$LIVE_THEME" ] && diff -u "$LIVE_THEME" "$DEV_THEME" || true
+    ;;
+  promote)
+    ts=$(date +%Y%m%d-%H%M%S)
+    cp "$LIVE_CONF" "$LIVE_CONF.bak.$ts"
+    [ -f "$LIVE_THEME" ] && cp "$LIVE_THEME" "$LIVE_THEME.bak.$ts"
+    cp "$DEV_THEME" "$LIVE_THEME"
+    # The live config must source the LIVE theme, not the dev one -- otherwise
+    # promoting would wire your real tmux to the file you iterate in, and every
+    # half-finished theme edit would land on your running sessions.
+    sed 's|tmux-theme\.dev\.conf|tmux-theme.conf|' "$DEV_CONF" > "$LIVE_CONF"
+    echo "installed:"
+    echo "  $DEV_CONF  -> $LIVE_CONF"
+    echo "  $DEV_THEME -> $LIVE_THEME"
+    echo "backed up with suffix .bak.$ts"
+    echo
+    echo "apply to running sessions with:  tmux source-file ~/.tmux.conf"
+    echo "NOTE: default-terminal only applies to NEW panes -- existing panes keep"
+    echo "      their old TERM, so italics/colours there won't change until the"
+    echo "      pane is recreated."
+    ;;
+  *)
+    echo "usage: tmux-preview [attach|sync|reload|restart|kill|diff|promote]" >&2
+    exit 2
+    ;;
+esac
