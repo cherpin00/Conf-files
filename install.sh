@@ -3,7 +3,11 @@ set -e # Exit immediately on error
 
 # Get the directory of the script
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOTFILES=("vimrc" "tmux.conf")       # No dots in repo filenames
+# No dots in repo filenames; each is symlinked to ~/.<name>. tmux.conf refers
+# to ~/.tmux-theme.conf and ~/.tmux-scripts rather than to the repo, so the
+# clone can live anywhere.
+DOTFILES=("vimrc" "tmux.conf" "tmux-theme.conf")
+DOTDIRS=("tmux-scripts")             # Directories symlinked to ~/.<name>
 BASHRC_D_DIR="$HOME/.bashrc.d"       # Location for bashrc.d scripts
 NVIM_CONFIG_DIR="$HOME/.config/nvim" # Neovim config directory
 
@@ -116,6 +120,9 @@ function symlink_dotfiles() {
   echo "Symlinking dotfiles..."
   for file in "${DOTFILES[@]}"; do
     symlink_file "$DOTFILES_DIR/$file" "$HOME/.$file"
+  done
+  for dir in "${DOTDIRS[@]}"; do
+    symlink_file "$DOTFILES_DIR/$dir" "$HOME/.$dir"
   done
 }
 
@@ -266,15 +273,115 @@ function install_fd() {
   echo "✅ fd installed successfully."
 }
 
-# Run installation steps
-install_packages
-symlink_dotfiles
-symlink_bashrc_d
-ensure_bashrc_sourcing
-configure_vim
-configure_tmux
-install_lazyvim
-install_fd
-install_starship
+# ---------------------------------------------------------------------------
+# Step selection
+# ---------------------------------------------------------------------------
+# Every step is a flag. With no flags you get the default set for this machine,
+# which is the point of the split: the link/configure steps are cheap and safe
+# everywhere, while the apt-based installs need sudo and a Debian box, and are
+# actively wrong on a Meta devserver where the toolchain is already managed.
+
+# Ordered: symlinks have to exist before anything sources them, and starship
+# has to be on disk before bashrc.d/starship.sh looks for it.
+STEPS=(packages starship dotfiles bashrc_d bashrc_sourcing vim tmux lazyvim fd)
+
+declare -A STEP_FN=(
+  [packages]=install_packages
+  [starship]=install_starship
+  [dotfiles]=symlink_dotfiles
+  [bashrc_d]=symlink_bashrc_d
+  [bashrc_sourcing]=ensure_bashrc_sourcing
+  [vim]=configure_vim
+  [tmux]=configure_tmux
+  [lazyvim]=install_lazyvim
+  [fd]=install_fd
+)
+
+declare -A STEP_HELP=(
+  [packages]="apt-install tmux, fzf, vim+Vundle, git, neovim"
+  [starship]="download the starship prompt into ~/.config/bin"
+  [dotfiles]="symlink vimrc, tmux.conf, tmux-theme.conf, tmux-scripts into \$HOME"
+  [bashrc_d]="symlink bashrc.d/* into ~/.bashrc.d"
+  [bashrc_sourcing]="make ~/.bashrc source ~/.bashrc.d"
+  [vim]="run vim +PluginInstall"
+  [tmux]="reload tmux config in the running server"
+  [lazyvim]="symlink ~/.config/nvim and sync LazyVim plugins"
+  [fd]="apt-install fd-find"
+)
+
+# "meta" boxes get their packages from the managed image, not from apt.
+function detect_env() {
+  if [ -d /usr/facebook ] || [ -e /etc/fbwhoami ]; then
+    echo meta
+  else
+    echo generic
+  fi
+}
+
+function default_steps() {
+  case "$(detect_env)" in
+  # starship is in the meta set too: it needs no sudo and no apt, installing a
+  # single binary under $HOME, and is a no-op once that binary exists.
+  meta) echo starship dotfiles bashrc_d bashrc_sourcing vim tmux ;;
+  *) echo "${STEPS[@]}" ;;
+  esac
+}
+
+function usage() {
+  cat <<EOF
+usage: install.sh [--all] [--<step>...] [--list] [--help]
+
+With no arguments, runs the default set for this machine
+(detected: $(detect_env)):
+  $(default_steps)
+
+Steps:
+EOF
+  for step in "${STEPS[@]}"; do
+    printf '  --%-16s %s\n' "${step//_/-}" "${STEP_HELP[$step]}"
+  done
+}
+
+declare -A SELECTED=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+  --all)
+    for step in "${STEPS[@]}"; do SELECTED[$step]=1; done
+    ;;
+  --list | --help | -h)
+    usage
+    exit 0
+    ;;
+  --*)
+    # Accept --bashrc-d as well as --bashrc_d.
+    step="${1#--}"
+    step="${step//-/_}"
+    if [ -z "${STEP_FN[$step]:-}" ]; then
+      echo "❌ Unknown step: $1" >&2
+      echo >&2
+      usage >&2
+      exit 2
+    fi
+    SELECTED[$step]=1
+    ;;
+  *)
+    echo "❌ Unexpected argument: $1" >&2
+    exit 2
+    ;;
+  esac
+  shift
+done
+
+if [ ${#SELECTED[@]} -eq 0 ]; then
+  for step in $(default_steps); do SELECTED[$step]=1; done
+fi
+
+# Iterate STEPS, not SELECTED: associative arrays have no order, and these
+# steps do have one.
+for step in "${STEPS[@]}"; do
+  [ -n "${SELECTED[$step]:-}" ] || continue
+  "${STEP_FN[$step]}"
+done
 
 echo "✅ Setup complete! Restart your terminal to apply changes."
