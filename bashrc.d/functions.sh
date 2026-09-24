@@ -1,7 +1,7 @@
 # --- shell integrations -----------------------------------------------------
 # Guarded: this file is symlinked onto every host, and not all of them have
 # these tools. An unguarded `. <(flux completion bash)` errors on login.
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
+# (fzf is deliberately absent here -- fzf.sh owns it.)
 command -v flux &>/dev/null && . <(flux completion bash)
 # --cmd cd makes zoxide shadow cd, so plain `cd` learns frecency.
 command -v zoxide &>/dev/null && eval "$(zoxide init bash --cmd cd)"
