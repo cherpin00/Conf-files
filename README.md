@@ -35,7 +35,8 @@ installing over it is wrong rather than merely slow.
 | `--bashrc-d` | symlink `bashrc.d/*` into `~/.bashrc.d` |
 | `--bashrc-sourcing` | make `~/.bashrc` source `~/.bashrc.d` |
 | `--vim` | run `vim +PluginInstall` |
-| `--tmux` | reload the tmux config in the running server |
+| `--tpm` | clone the tmux plugin manager into `~/.tmux/plugins/tpm` |
+| `--tmux` | reload the tmux config in the running server, then install tmux plugins |
 | `--lazyvim` | symlink `~/.config/nvim` and sync LazyVim plugins |
 | `--fd` | apt-install `fd-find` (and symlink `fdfind` → `fd`) |
 
@@ -128,18 +129,36 @@ can never overwrite your real saved layout.
 
 ### tmux dependencies
 
-Not installed by `install.sh` — clone these if you want the plugin keybindings,
-or delete the matching `run-shell` line from `tmux.conf`:
+The three local plugins are not installed by `install.sh` — clone these if you
+want their keybindings, or delete the matching `run-shell` line from
+`tmux.conf`:
 
 ```bash
 git clone git@github.com:cherpin00/tmux-scratchpad.git      ~/code/tmux-scratchpad
 git clone git@github.com:cherpin00/tmux-agent-dashboard.git ~/code/tmux-agent-sidebar
 git clone git@github.com:cherpin00/tmux-worktree.git        ~/code/tmux-worktree
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm   # then: prefix I
 ```
 
-tpm manages resurrect and continuum, which save the session layout every 15
-minutes and restore it on server start.
+tpm and the plugins it manages — resurrect and continuum — *are* handled:
+`--tpm` clones tpm, and `--tmux` then runs `tpm/bin/install_plugins` to fetch
+the rest, so `prefix I` by hand is not needed. Between them they snapshot the
+session every 15 minutes and restore it on server start.
+
+What comes back is the session and window names, the pane layout, each pane's
+working directory, and its scrollback (`@resurrect-capture-pane-contents`).
+Programs restart only if they match `@resurrect-processes` — resurrect's
+conservative default list, plus an entry that reopens Claude Code panes with
+`claude --continue`, resuming that directory's most recent conversation and
+preserving whatever flags the pane was started with. `tmux.conf` explains the
+`~`/`->`/`*` syntax at the option itself.
+
+Two things to know about the arrangement:
+
+- Continuum autosaves by prepending `#(continuum_save.sh)` to `status-right`,
+  and the status redraw is what drives the save. Re-`set`ting `status-right`
+  outside a full config reload silently stops the saving.
+- `--continue` resolves per directory, so two agent panes sharing a working
+  directory both resume the same conversation.
 
 ## vim / neovim
 

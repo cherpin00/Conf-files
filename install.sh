@@ -201,6 +201,19 @@ function configure_vim() {
   vim +PluginInstall +qall
 }
 
+function install_tpm() {
+  echo "Installing tpm (tmux plugin manager)..."
+
+  TPM_DIR="$HOME/.tmux/plugins/tpm"
+
+  if [ -d "$TPM_DIR" ]; then
+    echo "tpm is already installed. Skipping installation."
+    return
+  fi
+
+  git clone --depth 1 https://github.com/tmux-plugins/tpm.git "$TPM_DIR"
+}
+
 function configure_tmux() {
   echo "Configuring tmux..."
 
@@ -218,6 +231,15 @@ function configure_tmux() {
     echo "No running tmux session found. Starting a new session..."
     tmux new-session -d
     tmux source-file "$HOME/.tmux.conf"
+  fi
+
+  # tpm reads the @plugin options off a LIVE server, so this has to come after
+  # the source-file above -- not from the tpm step, which only clones. Guarded
+  # rather than assumed, so --tmux on its own still works when tpm is absent.
+  # Idempotent: plugins already on disk are skipped.
+  if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+    echo "Installing tmux plugins..."
+    "$HOME/.tmux/plugins/tpm/bin/install_plugins"
   fi
 }
 
@@ -283,7 +305,7 @@ function install_fd() {
 
 # Ordered: symlinks have to exist before anything sources them, and starship
 # has to be on disk before bashrc.d/starship.sh looks for it.
-STEPS=(packages starship dotfiles bashrc_d bashrc_sourcing vim tmux lazyvim fd)
+STEPS=(packages starship dotfiles bashrc_d bashrc_sourcing vim tpm tmux lazyvim fd)
 
 declare -A STEP_FN=(
   [packages]=install_packages
@@ -292,6 +314,7 @@ declare -A STEP_FN=(
   [bashrc_d]=symlink_bashrc_d
   [bashrc_sourcing]=ensure_bashrc_sourcing
   [vim]=configure_vim
+  [tpm]=install_tpm
   [tmux]=configure_tmux
   [lazyvim]=install_lazyvim
   [fd]=install_fd
@@ -304,7 +327,8 @@ declare -A STEP_HELP=(
   [bashrc_d]="symlink bashrc.d/* into ~/.bashrc.d"
   [bashrc_sourcing]="make ~/.bashrc source ~/.bashrc.d"
   [vim]="run vim +PluginInstall"
-  [tmux]="reload tmux config in the running server"
+  [tpm]="clone the tmux plugin manager into ~/.tmux/plugins/tpm"
+  [tmux]="reload tmux config in the running server, then install tmux plugins"
   [lazyvim]="symlink ~/.config/nvim and sync LazyVim plugins"
   [fd]="apt-install fd-find"
 )
@@ -320,9 +344,9 @@ function detect_env() {
 
 function default_steps() {
   case "$(detect_env)" in
-  # starship is in the meta set too: it needs no sudo and no apt, installing a
-  # single binary under $HOME, and is a no-op once that binary exists.
-  meta) echo starship dotfiles bashrc_d bashrc_sourcing vim tmux ;;
+  # starship and tpm are in the meta set too: neither needs sudo or apt, both
+  # install under $HOME, and both are a no-op once already on disk.
+  meta) echo starship dotfiles bashrc_d bashrc_sourcing vim tpm tmux ;;
   *) echo "${STEPS[@]}" ;;
   esac
 }
